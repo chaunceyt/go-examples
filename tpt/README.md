@@ -21,5 +21,7 @@ Simple tool that analysis text.
 
 ## TODO
 
-1. text-to-speech endpoint
-2. json payload endpoint
+1. text-to-speech endpoint (UI)
+2. translate endpoint (translate one-to-many languages - i,e english -> es, pt, etc)
+3. additional logging
+4. AWS secrets via ENV

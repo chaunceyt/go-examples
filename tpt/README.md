@@ -56,7 +56,6 @@ export AWS_REGION=YOUR_AWS_REGION
 1. AWS Comphrend AI Service
 2. AWS Translate AI Service
 3. Golang AWS SDK
-4. AWS Account with `~/.aws/credentials` in place.
 
 ## TODO
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -30,12 +31,15 @@ func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 	var fromText string
 	var textStr string
 
-	region := "us-east-1"
-	profile := "default"
+	region := os.Getenv("AWS_REGION")
+
+	if region == "" {
+		region = "us-east-1"
+		log.Println("Using", region, "as the default region")
+	}
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config:            aws.Config{Region: aws.String(region)},
-		Profile:           profile,
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
@@ -50,6 +54,7 @@ func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 	if langCode != "en" {
 		// Translate to english
+		log.Println("Detected language code:", langCode, "Translating...")
 		fromLang = langCode
 		fromText = details.Message
 		textStr = translateText(langCode, details.Message, sess)
@@ -73,7 +78,7 @@ func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(errResp.Error())
 	}
 
-	// Detect KeyPhrase(s) - returns the key phrases or talking points and a confidence score to support that this is a key phrase.
+	// Detect KeyPhrase(s) - returns the key phrases or talking points and a confidence score.
 	log.Println("Detecting KeyPhrases in content...")
 	keyPhraseInput := &comprehend.DetectKeyPhrasesInput{
 		LanguageCode: aws.String(langCode),

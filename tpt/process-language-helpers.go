@@ -42,6 +42,7 @@ func translateText(langCode string, textContent string, sess *session.Session) s
 	toLang := "en"
 
 	svc := translate.New(sess)
+	log.Println("Translating the submitted text...")
 	req, resp := svc.TextRequest(&translate.TextInput{
 		SourceLanguageCode: aws.String(langCode),
 		TargetLanguageCode: aws.String(toLang),
@@ -51,5 +52,7 @@ func translateText(langCode string, textContent string, sess *session.Session) s
 	if err != nil {
 		return ""
 	}
+
+	log.Println("Text translation completed...")
 	return *resp.TranslatedText
 }

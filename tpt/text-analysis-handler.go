@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -12,6 +13,13 @@ import (
 )
 
 func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
+	region := os.Getenv("AWS_REGION")
+
+	if region == "" {
+		region = "us-east-1"
+		log.Println("Using", region, "as the default region")
+	}
+
 	tmpl := template.Must(template.New("webform").Parse(webform))
 
 	if r.Method != http.MethodPost {
@@ -23,12 +31,8 @@ func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	var fromText string
 	var textStr string
 
-	region := "us-east-1"
-	profile := "default"
-
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		Config:            aws.Config{Region: aws.String(region)},
-		Profile:           profile,
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 

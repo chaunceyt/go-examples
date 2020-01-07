@@ -1,6 +1,6 @@
 # Text Processing Tool
 
-Simple tool that analysis text.
+Simple tool to analyze text.
 
 ## Workflow
 

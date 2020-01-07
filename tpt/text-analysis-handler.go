@@ -5,20 +5,12 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/comprehend"
 )
 
 func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
-	region := os.Getenv("AWS_REGION")
-
-	if region == "" {
-		region = "us-east-1"
-		log.Println("Using", region, "as the default region")
-	}
 
 	tmpl := template.Must(template.New("webform").Parse(webform))
 
@@ -31,10 +23,7 @@ func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	var fromText string
 	var textStr string
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config:            aws.Config{Region: aws.String(region)},
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	sess := appSession()
 
 	svc := comprehend.New(sess)
 
@@ -70,72 +59,14 @@ func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(errResp.Error())
 	}
 
-	// Detect KeyPhrase(s) - returns the key phrases or talking points and a confidence score to support that this is a key phrase.
-	log.Println("Detecting KeyPhrases in content...")
-	keyPhraseInput := &comprehend.DetectKeyPhrasesInput{
-		LanguageCode: aws.String(langCode),
-		Text:         aws.String(textStr),
-	}
-
-	keyPhraseResp, errKeyPhrase := svc.DetectKeyPhrases(keyPhraseInput)
-	if errKeyPhrase != nil {
-		fmt.Println("Got error calling DetectEntities")
-		fmt.Println(errResp.Error())
-	}
-
-	var phrases []SentimentKeyPhrases
-
-	for _, p := range keyPhraseResp.KeyPhrases {
-		phrases = append(phrases, SentimentKeyPhrases{
-			Text:  *p.Text,
-			Score: *p.Score,
-		})
-
-	}
+	// Detect KeyPhrase(s) - returns the key phrases or talking points and a confidence score.
+	phrases := detectKeyPhrases(langCode, textStr, svc)
 
 	// Detect Entity Recognition
-	entitiesInput := &comprehend.DetectEntitiesInput{
-		LanguageCode: aws.String(langCode),
-		Text:         aws.String(textStr),
-	}
+	entities := detectEntities(langCode, textStr, svc)
 
-	entitiesResp, errEntities := svc.DetectEntities(entitiesInput)
-	if errEntities != nil {
-		fmt.Println("Got error calling DetectEntities")
-		fmt.Println(errResp.Error())
-	}
-
-	var entities []SentimentEntities
-
-	for _, e := range entitiesResp.Entities {
-		entities = append(entities, SentimentEntities{
-			Text:  *e.Text,
-			Score: *e.Score,
-			Type:  *e.Type,
-		})
-	}
-
-	// Detect Syntax
-	syntaxInput := &comprehend.DetectSyntaxInput{
-		LanguageCode: aws.String(langCode),
-		Text:         aws.String(textStr),
-	}
-
-	syntaxResp, errSyntax := svc.DetectSyntax(syntaxInput)
-	if errSyntax != nil {
-		fmt.Println("Got error calling DetectSyntax")
-		fmt.Println(errSyntax)
-	}
-
-	var syntaxTokens []SentimentSyntaxTokens
-
-	for _, st := range syntaxResp.SyntaxTokens {
-		syntaxTokens = append(syntaxTokens, SentimentSyntaxTokens{
-			PartOfSpeechScore: *st.PartOfSpeech.Score,
-			PartOfSpeechTag:   *st.PartOfSpeech.Tag,
-			Text:              *st.Text,
-		})
-	}
+	// Detect Syntax tokens.
+	syntaxTokens := detectSyntax(langCode, textStr, svc)
 
 	// Process template.
 	tmpl.Execute(w, SentimentResultsDetails{

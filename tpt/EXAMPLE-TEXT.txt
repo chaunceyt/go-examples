@@ -1,0 +1,41 @@
+Text used to develop this little application.
+
+Sentiment analysis
+
+English (en)
+
+I ordered a small and expected it to fit just right but it was a little bit more like a medium-large. It was great quality. 
+It's a lighter brown than pictured but fairly close. Would be ten times better if it was lined with cotton or wool on the inside.
+
+Spanish English (es) [Translated using AWS translate]
+
+Pedí un pequeño y esperaba que encajara bien, pero era un poco más como un medio-grande. Era de gran calidad. 
+Es un marrón más claro que en la foto, pero bastante cerca. Sería diez veces mejor si estuviera forrado con algodón o lana en el interior.
+
+Keyphrase extraction example copy
+
+English (en)
+
+ I'm an avid photographer, and I'm primarily found shooting with my DSLR or my instant film camera that I carry around for casual use. 
+ While nothing beats my DSLR in power and convenience, there's something magical about my instant film camera. 
+ Perhaps it's that you're shooting on actual film, or maybe it's that every shot you take is a unique physical artifact (which is special in today's world of Instagram and Facebook, where photos are a dime a dozen). 
+ All I know for sure is that they are incredibly fun to use and peoples' eyes light up when you pull one of these out at a party.
+
+Spanish English (es) [Translated using AWS translate]
+
+Soy un fotógrafo ávido, y me encuentro principalmente fotografiando con mi DSLR o mi cámara de película instantánea que llevo para uso casual. 
+Aunque nada supera a mi DSLR en potencia y comodidad, hay algo mágico en mi cámara de película instantánea. 
+Tal vez es que estás filmando en una película real, o tal vez es que cada toma que tomas es un artefacto físico único (que es especial en el mundo actual de Instagram y Facebook, donde las fotos son un centavo por docena). 
+Todo lo que sé con seguridad es que son increíblemente divertidos de usar y los ojos de la gente se iluminan cuando sacas uno de estos en una fiesta.
+
+
+Entity Recognition
+
+ Amazon.com, Inc. is located in Seattle, WA and was founded July 5th, 1994 by Jeff Bezos, 
+ allowing customers to buy everything from books to blenders. Seattle is north of Portland and south of Vancouver, BC. 
+ Other notable Seattle-based companies are Starbucks and Boeing.
+
+ This was such a beautiful book. I wasn’t even planning any travel when I came across this and just started flipping through the pages. 
+ I really like the cover and all the large glossy photographs in this book. John Smith did a wonderful job with the photography. 
+ I’ve found a perfect home for this on my coffee table. I’m planning a trip to Paris and Barcelona soon and I know this will come in handy. 
+ In the meantime, it’s perfect for assisting this armchair traveler!

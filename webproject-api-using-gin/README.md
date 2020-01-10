@@ -4,7 +4,7 @@ As I continue to teach myself Golang. This hack session I decided to try [gin](h
 
 ## Issue
 
-Work in an environment that uses GitLab + GKE as the CI solution for our developers. We're currently using a helm chart to generate the Kubernetes manifests for each prprojects workload. These workloads contain the following services
+I work in an environment that uses GitLab + GKE as the CI solution for our developers. We're currently using a helm chart to generate the Kubernetes manifests for each prprojects workload. These workloads contain the following services
 
 - Apache/PHP7.x PHP-FPM
 - Mariadb

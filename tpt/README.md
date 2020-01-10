@@ -17,14 +17,12 @@ NOTE: Download the .csv file so you can export them as environmental variables l
             "Sid": "VisualEditor0",
             "Effect": "Allow",
             "Action": [
-                "polly:SynthesizeSpeech",
                 "comprehend:DetectSentiment",
                 "comprehend:DetectEntities",
                 "comprehend:DetectDominantLanguage",
                 "translate:TranslateText",
                 "comprehend:DetectSyntax",
-                "comprehend:DetectKeyPhrases",
-                "polly:DescribeVoices"
+                "comprehend:DetectKeyPhrases"
             ],
             "Resource": "*"
         }
@@ -59,11 +57,8 @@ export AWS_REGION=YOUR_AWS_REGION
 
 ## TODO
 
-1. text-to-speech endpoint (UI)
-2. translate endpoint (translate one-to-many languages - i,e english -> es, pt, etc)
-3. additional logging
-4. AWS secrets via ENV (done)
-5. Consistent error handling
-6. Auth for json api
+1. Dockerize
+2. Create Kubernetes deployment
+3. Create helm3 chart
 
 

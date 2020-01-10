@@ -11,6 +11,7 @@ import (
 )
 
 func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
+	secureHeaders(w)
 
 	tmpl := template.Must(template.New("webform").Parse(webform))
 
@@ -23,8 +24,8 @@ func textAnalysisHandler(w http.ResponseWriter, r *http.Request) {
 	var fromText string
 	var textStr string
 
+	// appSession *session.Session
 	sess := appSession()
-
 	svc := comprehend.New(sess)
 
 	details := SentimentResultsDetails{

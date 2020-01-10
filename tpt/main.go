@@ -27,9 +27,9 @@ func main() {
 	router := mux.NewRouter()
 	router.HandleFunc("/", indexHandler)
 	router.HandleFunc("/text-analysis", textAnalysisHandler)
-	router.HandleFunc("/text-to-speech", textToSpeechHandler)
-	router.HandleFunc("/api/json", jsonAPIHandler).Methods(http.MethodPost)
+	router.HandleFunc("/text-analysis/json", jsonAPIHandler).Methods(http.MethodPost)
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
 		format := "%s - - [%s] \"%s %s %s\" %s\n"
 		log.Printf(format, r.RemoteAddr, time.Now().Format(time.RFC1123),
 			r.Method, r.URL.Path, r.Proto, r.UserAgent())

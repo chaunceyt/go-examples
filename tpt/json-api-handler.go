@@ -18,6 +18,10 @@ type InputData struct {
 func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 
+	var fromLang string
+	var fromText string
+	var textStr string
+
 	decoder := json.NewDecoder(r.Body)
 	var inputData InputData
 	err := decoder.Decode(&inputData)
@@ -25,12 +29,7 @@ func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	var fromLang string
-	var fromText string
-	var textStr string
-
 	sess := appSession()
-
 	svc := comprehend.New(sess)
 
 	details := InputData{
@@ -49,7 +48,6 @@ func jsonAPIHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		textStr = details.Message
 	}
-
 	// Process textStr
 
 	// Detect Sentiment - returns the overall sentiment of a text (Positive, Negative, Neutral, or Mixed).

@@ -15,7 +15,7 @@ I work in an environment that uses GitLab + GKE as the CI solution for our devel
 
 ## Proof of concept
 
-Create an API endpoint that accepts a JSON payload and creates an environment
+Create an API endpoint that accepts a JSON payload instructing it to create an environment from the parameters submitted. This is ALPHA work.
 
 ## Example payload
 

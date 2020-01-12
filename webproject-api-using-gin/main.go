@@ -1,5 +1,9 @@
 package main
 
+//@TODO
+// - Check to see if object exists and update it. Similar to the kubectl apply -f filename.yaml
+// - Sidecar support
+
 import (
 	"flag"
 	"log"
@@ -8,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -18,6 +23,8 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+var mySigningKey = []byte("captainjacksparrowsayshi")
+
 type WebProjectInput struct {
 	DeploymentName           string `json:"deploymentName"`
 	PrimaryContainerName     string `json:"primaryContainerName"`
@@ -26,6 +33,8 @@ type WebProjectInput struct {
 	Replicas                 int32  `json:"replicas"`
 	Namespace                string `json:"namespace"`
 	CacheEngine              string `json:"cacheEngine"`
+	DatabaseEngine           string `json:"databaseEngine"`
+	DatabaseEngineImage      string `json:"databaseEngineImage"`
 }
 
 func main() {
@@ -58,11 +67,110 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 		deploymentInput := WebProjectInput{}
 		c.Bind(&deploymentInput)
 
-		//servicesClient := client.CoreV1().Services(corev1.NamespaceDefault)
-		createPVC(client, deploymentInput)
+		createPVC("webfiles", client, deploymentInput)
+		createPVC("db", client, deploymentInput)
 
-		//ingress := *v1beta1.ExtensionsV1beta1().Ingress
+		var useDatabase bool
 
+		if deploymentInput.DatabaseEngine == "" || deploymentInput.DatabaseEngineImage == "" {
+			useDatabase = false
+		} else {
+			useDatabase = true
+		}
+
+		// Create database workload.
+		if useDatabase == true {
+			databaseDeployment := &appsv1.Deployment{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Deployment",
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      deploymentInput.DeploymentName + "-db",
+					Namespace: deploymentInput.Namespace,
+					Labels: map[string]string{
+						"app": deploymentInput.DeploymentName + "-db",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Replicas: int32ptr(1),
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"app": deploymentInput.DeploymentName + "-db",
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: deploymentInput.DeploymentName + "-db",
+							Labels: map[string]string{
+								"app": deploymentInput.DeploymentName + "-db",
+							},
+						},
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:            deploymentInput.DatabaseEngine,
+									Image:           deploymentInput.DatabaseEngineImage,
+									ImagePullPolicy: corev1.PullIfNotPresent,
+									Env: []v1.EnvVar{
+										{Name: "MYSQL_ROOT_PASSWORD", Value: "admin"},
+									},
+									VolumeMounts: []corev1.VolumeMount{
+										{
+											Name:      "database-volume",
+											MountPath: "/var/lib/mysql",
+										},
+									},
+									Ports: []corev1.ContainerPort{
+										{
+											ContainerPort: 3306,
+											Protocol:      corev1.ProtocolTCP,
+										},
+									},
+								},
+							},
+							RestartPolicy: corev1.RestartPolicyAlways,
+							Volumes: []corev1.Volume{
+								GetDatabaseVolume(deploymentInput),
+							},
+						},
+					},
+				},
+			}
+			// Create  Database Deployment
+			log.Println("Creating database deployment...")
+			resultDatabase, errDatabase := client.AppsV1().Deployments(deploymentInput.Namespace).Create(databaseDeployment)
+			if errDatabase != nil {
+				panic(errDatabase)
+			}
+			log.Printf("Created database deployment %q.\n", resultDatabase.GetName())
+
+			// move to a single func.
+			databaseServiceName := deploymentInput.DeploymentName + "-db-svc"
+			databaseLabels := map[string]string{
+				"app": deploymentInput.DeploymentName + "-db",
+			}
+			databaseService := &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: databaseServiceName,
+				},
+				Spec: v1.ServiceSpec{
+					Selector: databaseLabels,
+					Ports: []v1.ServicePort{{
+						Port:       3306,
+						TargetPort: intstr.FromInt(3306),
+					}},
+				},
+			}
+			databaseService, errDatabaseService := client.CoreV1().Services(deploymentInput.Namespace).Create(databaseService)
+			if errDatabaseService != nil {
+				panic(errDatabaseService)
+			}
+			// End Database workload Setup
+
+		}
+
+		// WebProject Deployment.
 		deployment := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
@@ -107,7 +215,7 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 								},
 								Ports: []corev1.ContainerPort{
 									{
-										ContainerPort: 80,
+										ContainerPort: 8080,
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
@@ -180,7 +288,7 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 
 			// move to a single func.
 			serviceName := deploymentInput.DeploymentName + "-redis-svc"
-			labels := map[string]string{
+			redisLabels := map[string]string{
 				"app": deploymentInput.DeploymentName + "-redis",
 			}
 			service := &v1.Service{
@@ -188,7 +296,7 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 					Name: serviceName,
 				},
 				Spec: v1.ServiceSpec{
-					Selector: labels,
+					Selector: redisLabels,
 					Ports: []v1.ServicePort{{
 						Port:       6379,
 						TargetPort: intstr.FromInt(6379),
@@ -270,7 +378,8 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 
 		log.Println("Creating service for WebProject.")
 		serviceName := deploymentInput.DeploymentName + "-svc"
-		labels := map[string]string{
+
+		webprojectLabels := map[string]string{
 			"app": deploymentInput.DeploymentName,
 		}
 		webprojectService := &v1.Service{
@@ -278,7 +387,7 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 				Name: serviceName,
 			},
 			Spec: v1.ServiceSpec{
-				Selector: labels,
+				Selector: webprojectLabels,
 				Ports: []v1.ServicePort{{
 					Port:       80,
 					TargetPort: intstr.FromInt(80),
@@ -333,20 +442,20 @@ func int32ptr(i int32) *int32 {
 	return &i
 }
 
-func createPVC(client *kubernetes.Clientset, deploymentInput WebProjectInput) {
+func createPVC(pvcType string, client *kubernetes.Clientset, deploymentInput WebProjectInput) {
 	pvc := &corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: deploymentInput.DeploymentName + "-pvc",
+			Name: deploymentInput.DeploymentName + "-" + pvcType + "-pvc",
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("3Gi"),
+					corev1.ResourceStorage: resource.MustParse("1Gi"),
 				},
 			},
 		},
@@ -373,9 +482,20 @@ func GetSiteFilesVolume(deploymentInput WebProjectInput) corev1.Volume {
 	return corev1.Volume{
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: deploymentInput.DeploymentName + "-pvc",
+				ClaimName: deploymentInput.DeploymentName + "-webfiles-pvc",
 			},
 		},
 		Name: "files",
+	}
+}
+
+func GetDatabaseVolume(deploymentInput WebProjectInput) corev1.Volume {
+	return corev1.Volume{
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: deploymentInput.DeploymentName + "-db-pvc",
+			},
+		},
+		Name: "database-volume",
 	}
 }

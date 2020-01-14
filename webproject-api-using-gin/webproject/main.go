@@ -14,8 +14,7 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-var mySigningKey = []byte("captainjacksparrowsayshi")
-
+// WebProjectInput struct.
 type WebProjectInput struct {
 	DeploymentName           string `json:"deploymentName"`
 	PrimaryContainerName     string `json:"primaryContainerName"`

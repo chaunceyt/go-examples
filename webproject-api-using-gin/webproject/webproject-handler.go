@@ -16,7 +16,6 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 
 		// Create Persistent Volume claims first.
 		createPersistentVolumeClaim("webfiles", client, deploymentInput)
-		createPersistentVolumeClaim("db", client, deploymentInput)
 
 		// Determine if we are needing to deploy a database.
 		var useDatabase bool
@@ -29,6 +28,7 @@ func createWebProject(client *kubernetes.Clientset) gin.HandlerFunc {
 
 		// Create database workload.
 		if useDatabase == true {
+			createPersistentVolumeClaim("db", client, deploymentInput)
 			createDatabaseWorkload(client, deploymentInput)
 		}
 

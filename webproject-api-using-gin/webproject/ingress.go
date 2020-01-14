@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,8 +36,14 @@ func createIngress(client *kubernetes.Clientset, deploymentInput WebProjectInput
 			},
 		},
 	}
-	_, errIngress := client.ExtensionsV1beta1().Ingresses(deploymentInput.Namespace).Create(ingress)
-	if errIngress != nil {
-		panic(errIngress)
+
+	_, foundErr := client.ExtensionsV1beta1().Ingresses(deploymentInput.Namespace).Get(deploymentInput.DeploymentName+"-ing", metav1.GetOptions{})
+	if foundErr != nil {
+		result, errIngress := client.ExtensionsV1beta1().Ingresses(deploymentInput.Namespace).Create(ingress)
+		if errIngress != nil {
+			panic(errIngress)
+		}
+		log.Printf("Created Memcahed Deployment - Name: %q, UID: %q\n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetUID())
+
 	}
 }

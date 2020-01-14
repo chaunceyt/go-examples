@@ -57,7 +57,7 @@ func createWebprojectWorkload(client *kubernetes.Clientset, deploymentInput WebP
 					RestartPolicy: corev1.RestartPolicyAlways,
 					Volumes: []corev1.Volume{
 						createEmptyDirVolume("webroot"),
-						getVolumeClaim("files", "webfiles", deploymentInput),
+						attachVolumeFromClaim("files", "webfiles", deploymentInput),
 					},
 				},
 			},
@@ -65,13 +65,24 @@ func createWebprojectWorkload(client *kubernetes.Clientset, deploymentInput WebP
 	}
 
 	// Create Web Project Deployment
-	log.Println("Creating deployment...")
-	resultWebProject, errWebProject := client.AppsV1().Deployments(deploymentInput.Namespace).Create(deployment)
-	// resultWebProject, errWebProject := client.Resource(deploymentRes).Namespace(deploymentInput.Namespace).Create(deployment, metav1.CreateOptions{})
-	if errWebProject != nil {
-		panic(errWebProject)
+	foundWebProject, foundErr := client.AppsV1().Deployments(deploymentInput.Namespace).Get(deploymentInput.DeploymentName, metav1.GetOptions{})
+	if foundErr != nil {
+		log.Println("Creating webproject deployment...")
+		resultWebProject, errWebProject := client.AppsV1().Deployments(deploymentInput.Namespace).Create(deployment)
+		if errWebProject != nil {
+			panic(errWebProject)
+		}
+		log.Printf("Created Deployment - Name: %q, UID: %q\n", resultWebProject.GetObjectMeta().GetName(), resultWebProject.GetObjectMeta().GetUID())
+	} else {
+		log.Println("Updating webproject deployment...")
+		foundWebProject.Spec.Replicas = int32ptr(deploymentInput.Replicas)
+		foundWebProject.Spec.Template.Spec.Containers[0].Image = deploymentInput.PrimaryContainerImageTag
+		foundWebProjectResult, errFoundWebProject := client.AppsV1().Deployments(deploymentInput.Namespace).Update(foundWebProject)
+		if errFoundWebProject != nil {
+			panic(errFoundWebProject)
+		}
+		log.Printf("Updated Deployment - Name: %q, UID: %q\n", foundWebProjectResult.GetObjectMeta().GetName(), foundWebProjectResult.GetObjectMeta().GetUID())
 	}
-	log.Printf("Created deployment %q.\n", resultWebProject.GetName())
 
 	log.Println("Creating service for WebProject.")
 	serviceName := deploymentInput.DeploymentName + "-svc"
@@ -92,13 +103,18 @@ func createWebprojectWorkload(client *kubernetes.Clientset, deploymentInput WebP
 			}},
 		},
 	}
-	webprojectServiceResp, errWebprojectService := client.CoreV1().Services(deploymentInput.Namespace).Create(webprojectService)
-	if errWebprojectService != nil {
-		panic(errWebprojectService)
+
+	_, foundWebprojectServiceErr := client.CoreV1().Services(deploymentInput.Namespace).Get(deploymentInput.DeploymentName+"-svc", metav1.GetOptions{})
+	if foundWebprojectServiceErr != nil {
+		webprojectServiceResp, errWebprojectService := client.CoreV1().Services(deploymentInput.Namespace).Create(webprojectService)
+		if errWebprojectService != nil {
+			panic(errWebprojectService)
+		}
+		log.Println(webprojectServiceResp.GetName())
+		// log.Println("Created service for Webproject...")
+		log.Printf("Created Webproject Service - Name: %q, UID: %q\n", webprojectServiceResp.GetObjectMeta().GetName(), webprojectServiceResp.GetObjectMeta().GetUID())
+
 	}
-	log.Println(webprojectServiceResp.GetName())
-	// log.Println("Created service for Webproject...")
-	log.Printf("Created Webproject Service - Name: %q, UID: %q\n", webprojectServiceResp.GetObjectMeta().GetName(), webprojectServiceResp.GetObjectMeta().GetUID())
 }
 
 func createContainerPort(portNumber int32) corev1.ContainerPort {

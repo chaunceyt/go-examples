@@ -48,10 +48,7 @@ func createDatabaseWorkload(client *kubernetes.Clientset, deploymentInput WebPro
 								{Name: "MYSQL_ROOT_PASSWORD", Value: "admin"},
 							},
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      "database-volume",
-									MountPath: "/var/lib/mysql",
-								},
+								createVolumeMount("database-volume", "/var/lib/mysql"),
 							},
 							Ports: []corev1.ContainerPort{
 								{
@@ -63,7 +60,7 @@ func createDatabaseWorkload(client *kubernetes.Clientset, deploymentInput WebPro
 					},
 					RestartPolicy: corev1.RestartPolicyAlways,
 					Volumes: []corev1.Volume{
-						getVolumeClaim("database-volume", "db", deploymentInput),
+						attachVolumeFromClaim("database-volume", "db", deploymentInput),
 					},
 				},
 			},
@@ -71,13 +68,17 @@ func createDatabaseWorkload(client *kubernetes.Clientset, deploymentInput WebPro
 	}
 
 	// Create  Database Deployment
-	log.Println("Creating database deployment...")
-	resultDatabase, errDatabase := client.AppsV1().Deployments(deploymentInput.Namespace).Create(databaseDeployment)
-	if errDatabase != nil {
-		panic(errDatabase)
+	_, foundErr := client.AppsV1().Deployments(deploymentInput.Namespace).Get(deploymentInput.DeploymentName, metav1.GetOptions{})
+	if foundErr != nil {
+		log.Println("Creating database deployment...")
+		resultDatabase, errDatabase := client.AppsV1().Deployments(deploymentInput.Namespace).Create(databaseDeployment)
+		if errDatabase != nil {
+			panic(errDatabase)
+		}
+		// log.Printf("Created database deployment %q.\n", resultDatabase.GetName())
+		log.Printf("Created Database Deployment - Name: %q, UID: %q\n", resultDatabase.GetObjectMeta().GetName(), resultDatabase.GetObjectMeta().GetUID())
+
 	}
-	// log.Printf("Created database deployment %q.\n", resultDatabase.GetName())
-	log.Printf("Created Database Deployment - Name: %q, UID: %q\n", resultDatabase.GetObjectMeta().GetName(), resultDatabase.GetObjectMeta().GetUID())
 
 	// @TODO: move to a single func createService()
 	databaseServiceName := deploymentInput.DeploymentName + "-db-svc"

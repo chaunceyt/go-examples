@@ -55,14 +55,18 @@ func createMemcachedWorkload(client *kubernetes.Clientset, deploymentInput WebPr
 		},
 	}
 
-	// Create  Memcached Deployment
-	log.Println("Creating memcached deployment...")
-	result, err := client.AppsV1().Deployments(deploymentInput.Namespace).Create(memcachedDeployment)
-	if err != nil {
-		panic(err)
+	_, foundErr := client.AppsV1().Deployments(deploymentInput.Namespace).Get(deploymentInput.DeploymentName+"-memcached", metav1.GetOptions{})
+	if foundErr != nil {
+		// Create  Memcached Deployment
+		log.Println("Creating memcached deployment...")
+		result, err := client.AppsV1().Deployments(deploymentInput.Namespace).Create(memcachedDeployment)
+		if err != nil {
+			panic(err)
+		}
+		// log.Printf("Created memcached deployment %q.\n", resultRedis.GetName())
+		log.Printf("Created Memcahed Deployment - Name: %q, UID: %q\n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetUID())
+
 	}
-	// log.Printf("Created memcached deployment %q.\n", resultRedis.GetName())
-	log.Printf("Created Memcahed Deployment - Name: %q, UID: %q\n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetUID())
 
 	serviceName := deploymentInput.DeploymentName + "-memcached-svc"
 	labels := map[string]string{
@@ -81,10 +85,14 @@ func createMemcachedWorkload(client *kubernetes.Clientset, deploymentInput WebPr
 		},
 	}
 
-	log.Println("Creating memcached service...")
-	service, errRedisService := client.CoreV1().Services(deploymentInput.Namespace).Create(service)
-	if errRedisService != nil {
-		panic(errRedisService)
+	_, foundServiceErr := client.CoreV1().Services(deploymentInput.Namespace).Get(deploymentInput.DeploymentName+"-memcached-svc", metav1.GetOptions{})
+	if foundServiceErr != nil {
+		log.Println("Creating memcached service...")
+		service, errRedisService := client.CoreV1().Services(deploymentInput.Namespace).Create(service)
+		if errRedisService != nil {
+			panic(errRedisService)
+		}
+		log.Printf("Created Memcached Service - Name: %q, UID: %q\n", service.GetObjectMeta().GetName(), service.GetObjectMeta().GetUID())
+
 	}
-	log.Printf("Created Memcached Service - Name: %q, UID: %q\n", service.GetObjectMeta().GetName(), service.GetObjectMeta().GetUID())
 }

@@ -29,13 +29,16 @@ func createPersistentVolumeClaim(pvcType string, client *kubernetes.Clientset, d
 		},
 	}
 
-	log.Println("Creating pvc...")
-	resultPVC, errPVC := client.CoreV1().PersistentVolumeClaims(deploymentInput.Namespace).Create(pvc)
-	if errPVC != nil {
-		panic(errPVC)
+	// Check to see if persistent volume claim exists already.
+	_, foundErr := client.CoreV1().PersistentVolumeClaims(deploymentInput.Namespace).Get(deploymentInput.DeploymentName+"-"+pvcType+"-pvc", metav1.GetOptions{})
+	if foundErr != nil {
+		log.Println("Creating pvc...")
+		result, err := client.CoreV1().PersistentVolumeClaims(deploymentInput.Namespace).Create(pvc)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("Created PVC - Name: %q, UID: %q\n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetUID())
 	}
-	log.Printf("Created PVC - Name: %q, UID: %q\n", resultPVC.GetObjectMeta().GetName(), resultPVC.GetObjectMeta().GetUID())
-
 }
 
 // createEmptyDirVolume
@@ -48,6 +51,7 @@ func createEmptyDirVolume(name string) corev1.Volume {
 	}
 }
 
+// createVolumeMount - should be used to attach a volume to a deplopyment.
 func createVolumeMount(name string, mountPath string) corev1.VolumeMount {
 	return corev1.VolumeMount{
 		Name:      name,
@@ -55,19 +59,8 @@ func createVolumeMount(name string, mountPath string) corev1.VolumeMount {
 	}
 }
 
-func getSiteFilesVolume(deploymentInput WebProjectInput) corev1.Volume {
-	return corev1.Volume{
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: deploymentInput.DeploymentName + "-webfiles-pvc",
-			},
-		},
-		Name: "files",
-	}
-}
-
-// getVolumeClaim attaches the Persistent volume to container.
-func getVolumeClaim(name string, pvType string, deploymentInput WebProjectInput) corev1.Volume {
+// attachVolumeClaim attaches the Persistent volume to container.
+func attachVolumeFromClaim(name string, pvType string, deploymentInput WebProjectInput) corev1.Volume {
 	return corev1.Volume{
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
